@@ -1,0 +1,51 @@
+name: EmployeeService CI/CD to OpenShift
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+
+    - name: Set up Java 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Build with Maven
+      run: mvn clean package -DskipTests
+
+    - name: Login to OpenShift
+      run: |
+        oc login $OPENSHIFT_SERVER \
+          --token=$OPENSHIFT_TOKEN \
+          --insecure-skip-tls-verify=true
+
+    - name: Login to OpenShift Registry
+      run: |
+        echo $OPENSHIFT_TOKEN | docker login \
+          $OPENSHIFT_REGISTRY \
+          -u github-actions \
+          --password-stdin
+
+    - name: Build Docker Image
+      run: |
+        docker build -t employee-service:latest .
+
+    - name: Push Image
+      run: |
+        docker tag employee-service:latest \
+          $OPENSHIFT_REGISTRY/$OPENSHIFT_NAMESPACE/employee-service:latest
+        docker push \
+          $OPENSHIFT_REGISTRY/$OPENSHIFT_NAMESPACE/employee-service:latest
+
+    - name: Deploy to OpenShift
+      run: |
+        oc apply -f k8s/deployment.yaml
+        oc rollout restart deployment employee-service
