@@ -21,6 +21,13 @@ jobs:
     - name: Build with Maven
       run: mvn clean package -DskipTests
 
+    - name: Install OpenShift CLI (oc)
+      run: |
+        curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz
+        tar -xzf openshift-client-linux.tar.gz
+        sudo mv oc /usr/local/bin/
+        oc version
+
     - name: Login to OpenShift
       run: |
         oc login $OPENSHIFT_SERVER \
