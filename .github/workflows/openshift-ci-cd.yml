@@ -24,8 +24,14 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Build with Maven
-      run: mvn clean package -DskipTests
+    - name: Debug Maven environment
+      run: |
+        echo "JAVA_HOME=$env:JAVA_HOME"
+        echo "USERPROFILE=$env:USERPROFILE"
+        mvn -version
+
+    - name: Build with Maven (debug)
+      run: mvn -X clean package -DskipTests
 
     - name: Install OpenShift CLI (oc)
       run: |
