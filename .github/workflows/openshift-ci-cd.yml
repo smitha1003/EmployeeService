@@ -31,7 +31,7 @@ jobs:
         mvn -version
 
     - name: Build with Maven (debug)
-      run: mvn -X clean package -DskipTests
+      run: mvn -X clean package -DskipTests -s "settings-openshift.xml"
 
     - name: Install OpenShift CLI (oc)
       run: |
