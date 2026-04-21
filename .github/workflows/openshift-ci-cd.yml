@@ -15,59 +15,68 @@ jobs:
       OPENSHIFT_REGISTRY: ${{ secrets.OPENSHIFT_REGISTRY }}
 
     steps:
-    - name: Checkout source
-      uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-    - name: Set up Java 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: Debug Maven environment
-      run: |
-        echo "JAVA_HOME=$env:JAVA_HOME"
-        echo "USERPROFILE=$env:USERPROFILE"
-        mvn -version
+      - name: Debug Maven environment
+        shell: powershell
+        run: |
+          Write-Host "JAVA_HOME=$env:JAVA_HOME"
+          Write-Host "USERPROFILE=$env:USERPROFILE"
+          mvn -version
 
-    - name: Build with Maven (debug)
-      run: mvn -X clean package -DskipTests -s "C:/SmithasIntelliJWS/EmployeeService/settings-openshift.xml"
+      - name: Build with Maven
+        shell: powershell
+        run: |
+          mvn clean package -DskipTests -s "C:/SmithasIntelliJWS/EmployeeService/settings-openshift.xml"
 
-    - name: Install OpenShift CLI (oc)
-      run: |
-        Invoke-WebRequest -Uri https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -OutFile openshift-client-linux.tar.gz
-        tar -xzf openshift-client-linux.tar.gz
-        sudo mv oc /usr/local/bin/
-        oc version
+      - name: Install OpenShift CLI (Windows)
+        shell: powershell
+        run: |
+          $ocUrl = "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-windows.zip"
+          Invoke-WebRequest -Uri $ocUrl -OutFile oc.zip
+          Expand-Archive oc.zip -DestinationPath oc
+          $env:PATH += ";$PWD\oc"
+          oc version
 
+      - name: Login to OpenShift
+        shell: powershell
+        run: |
+          Write-Host "OpenShift server is: $env:OPENSHIFT_SERVER"
+          oc login $env:OPENSHIFT_SERVER `
+            --token=$env:OPENSHIFT_TOKEN `
+            --insecure-skip-tls-verify=true
 
-    - name: Login to OpenShift
-      run: |
-        echo "OpenShift server is: $OPENSHIFT_SERVER"
-        oc login "$OPENSHIFT_SERVER" \
-          --token="$OPENSHIFT_TOKEN" \
-          --insecure-skip-tls-verify=true
-    
+      - name: Login to OpenShift Registry
+        shell: powershell
+        run: |
+          $env:OPENSHIFT_TOKEN | docker login `
+            $env:OPENSHIFT_REGISTRY `
+            -u github-actions `
+            --password-stdin
 
-    - name: Login to OpenShift Registry
-      run: |
-        echo $OPENSHIFT_TOKEN | docker login \
-          $OPENSHIFT_REGISTRY \
-          -u github-actions \
-          --password-stdin
+      - name: Build Docker Image
+        shell: powershell
+        run: |
+          docker build -t employee-service:latest .
 
-    - name: Build Docker Image
-      run: |
-        docker build -t employee-service:latest .
+      - name: Push Image
+        shell: powershell
+        run: |
+          docker tag employee-service:latest `
+            $env:OPENSHIFT_REGISTRY/$env:OPENSHIFT_NAMESPACE/employee-service:latest
+          docker push `
+            $env:OPENSHIFT_REGISTRY/$env:OPENSHIFT_NAMESPACE/employee-service:latest
 
-    - name: Push Image
-      run: |
-        docker tag employee-service:latest \
-          $OPENSHIFT_REGISTRY/$OPENSHIFT_NAMESPACE/employee-service:latest
-        docker push \
-          $OPENSHIFT_REGISTRY/$OPENSHIFT_NAMESPACE/employee-service:latest
-
-    - name: Deploy to OpenShift
-      run: |
-        oc apply -f k8s/deployment.yaml
-        oc rollout restart deployment employee-service
+      - name: Deploy to OpenShift
+        shell: powershell
+        run: |
+          oc apply -f k8s/deployment.yaml
+          oc rollout restart deployment employee-service
+  ``
