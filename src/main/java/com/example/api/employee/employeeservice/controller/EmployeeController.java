@@ -27,28 +27,26 @@ public class EmployeeController {
         return employeeService.findAll();
     }
 
-    @PutMapping
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public void create(@RequestBody Employee e){
         employeeService.save(e);
     }
 
-    @PostMapping
+    @PutMapping
     @ResponseStatus(HttpStatus.OK)
     public void update(@RequestBody Employee e){
         Optional<Employee> existingEmp = employeeService.findById(e.getEmpId());
         if(existingEmp.isEmpty())
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Employee with id {"+e.getEmpId()+"} not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Employee with id " + e.getEmpId() + " not found");
         employeeService.save(e);
     }
 
     @GetMapping("/{id}")
-    @ResponseStatus(HttpStatus.FOUND)
+    @ResponseStatus(HttpStatus.OK)
     public Employee get(@PathVariable("id") Long empId){
-        Optional<Employee> existingEmp = employeeService.findById(empId);
-        if(existingEmp.isEmpty())
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Employee with id {"+empId+"} not found");
-        return existingEmp.get();
+        return employeeService.findById(empId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee with id " + empId + " not found"));
     }
 
     @GetMapping("/sort/id")
