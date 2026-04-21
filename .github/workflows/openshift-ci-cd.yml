@@ -35,7 +35,7 @@ jobs:
 
     - name: Install OpenShift CLI (oc)
       run: |
-        curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz
+        Invoke-WebRequest -Uri https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -OutFile openshift-client-linux.tar.gz
         tar -xzf openshift-client-linux.tar.gz
         sudo mv oc /usr/local/bin/
         oc version
